@@ -1,0 +1,472 @@
+[
+  {
+    "bairro": "Boa Vista",
+    "distrito_sanitario": "1",
+    "descricao_distrito": "DS I"
+  },
+  {
+    "bairro": "Cabanga",
+    "distrito_sanitario": "1",
+    "descricao_distrito": "DS I"
+  },
+  {
+    "bairro": "Coelhos",
+    "distrito_sanitario": "1",
+    "descricao_distrito": "DS I"
+  },
+  {
+    "bairro": "Ilha do Leite",
+    "distrito_sanitario": "1",
+    "descricao_distrito": "DS I"
+  },
+  {
+    "bairro": "Ilha Joana Bezerra",
+    "distrito_sanitario": "1",
+    "descricao_distrito": "DS I"
+  },
+  {
+    "bairro": "Paissandu",
+    "distrito_sanitario": "1",
+    "descricao_distrito": "DS I"
+  },
+  {
+    "bairro": "Recife",
+    "distrito_sanitario": "1",
+    "descricao_distrito": "DS I"
+  },
+  {
+    "bairro": "Santo Amaro",
+    "distrito_sanitario": "1",
+    "descricao_distrito": "DS I"
+  },
+  {
+    "bairro": "Santo Antonio",
+    "distrito_sanitario": "1",
+    "descricao_distrito": "DS I"
+  },
+  {
+    "bairro": "Sao Jose",
+    "distrito_sanitario": "1",
+    "descricao_distrito": "DS I"
+  },
+  {
+    "bairro": "Soledade",
+    "distrito_sanitario": "1",
+    "descricao_distrito": "DS I"
+  },
+  {
+    "bairro": "Agua Fria",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Alto Santa Terezinha",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Arruda",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Beberibe",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Bomba do Hemeterio",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Cajueiro",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Campina do Barreto",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Campo Grande",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Dois Unidos",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Encruzilhada",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Fundao",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Hipodromo",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Linha do Tiro",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Peixinhos",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Ponto de Parada",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Porto da Madeira",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Rosarinho",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Torreao",
+    "distrito_sanitario": "2",
+    "descricao_distrito": "DS II"
+  },
+  {
+    "bairro": "Aflitos",
+    "distrito_sanitario": "3",
+    "descricao_distrito": "DS III"
+  },
+  {
+    "bairro": "Alto do Mandu",
+    "distrito_sanitario": "3",
+    "descricao_distrito": "DS III"
+  },
+  {
+    "bairro": "Apipucos",
+    "distrito_sanitario": "3",
+    "descricao_distrito": "DS III"
+  },
+  {
+    "bairro": "Casa Amarela",
+    "distrito_sanitario": "3",
+    "descricao_distrito": "DS III"
+  },
+  {
+    "bairro": "Casa Forte",
+    "distrito_sanitario": "3",
+    "descricao_distrito": "DS III"
+  },
+  {
+    "bairro": "Derby",
+    "distrito_sanitario": "3",
+    "descricao_distrito": "DS III"
+  },
+  {
+    "bairro": "Dois Irmaos",
+    "distrito_sanitario": "3",
+    "descricao_distrito": "DS III"
+  },
+  {
+    "bairro": "Espinheiro",
+    "distrito_sanitario": "3",
+    "descricao_distrito": "DS III"
+  },
+  {
+    "bairro": "Gracas",
+    "distrito_sanitario": "3",
+    "descricao_distrito": "DS III"
+  },
+  {
+    "bairro": "Jaqueira",
+    "distrito_sanitario": "3",
+    "descricao_distrito": "DS III"
+  },
+  {
+    "bairro": "Monteiro",
+    "distrito_sanitario": "3",
+    "descricao_distrito": "DS III"
+  },
+  {
+    "bairro": "Parnamirim",
+    "distrito_sanitario": "3",
+    "descricao_distrito": "DS III"
+  },
+  {
+    "bairro": "Poco",
+    "distrito_sanitario": "3",
+    "descricao_distrito": "DS III"
+  },
+  {
+    "bairro": "Santana",
+    "distrito_sanitario": "3",
+    "descricao_distrito": "DS III"
+  },
+  {
+    "bairro": "Sitio dos Pintos",
+    "distrito_sanitario": "3",
+    "descricao_distrito": "DS III"
+  },
+  {
+    "bairro": "Tamarineira",
+    "distrito_sanitario": "3",
+    "descricao_distrito": "DS III"
+  },
+  {
+    "bairro": "Caxanga",
+    "distrito_sanitario": "4",
+    "descricao_distrito": "DS IV"
+  },
+  {
+    "bairro": "Cidade Universitaria",
+    "distrito_sanitario": "4",
+    "descricao_distrito": "DS IV"
+  },
+  {
+    "bairro": "Cordeiro",
+    "distrito_sanitario": "4",
+    "descricao_distrito": "DS IV"
+  },
+  {
+    "bairro": "Engenho do Meio",
+    "distrito_sanitario": "4",
+    "descricao_distrito": "DS IV"
+  },
+  {
+    "bairro": "Ilha do retiro",
+    "distrito_sanitario": "4",
+    "descricao_distrito": "DS IV"
+  },
+  {
+    "bairro": "Iputinga",
+    "distrito_sanitario": "4",
+    "descricao_distrito": "DS IV"
+  },
+  {
+    "bairro": "Madalena",
+    "distrito_sanitario": "4",
+    "descricao_distrito": "DS IV"
+  },
+  {
+    "bairro": "Prado",
+    "distrito_sanitario": "4",
+    "descricao_distrito": "DS IV"
+  },
+  {
+    "bairro": "Torre",
+    "distrito_sanitario": "4",
+    "descricao_distrito": "DS IV"
+  },
+  {
+    "bairro": "Torroes",
+    "distrito_sanitario": "4",
+    "descricao_distrito": "DS IV"
+  },
+  {
+    "bairro": "Varzea",
+    "distrito_sanitario": "4",
+    "descricao_distrito": "DS IV"
+  },
+  {
+    "bairro": "Zumbi",
+    "distrito_sanitario": "4",
+    "descricao_distrito": "DS IV"
+  },
+  {
+    "bairro": "Afogados",
+    "distrito_sanitario": "5",
+    "descricao_distrito": "DS V"
+  },
+  {
+    "bairro": "Areias",
+    "distrito_sanitario": "5",
+    "descricao_distrito": "DS V"
+  },
+  {
+    "bairro": "Barro",
+    "distrito_sanitario": "5",
+    "descricao_distrito": "DS V"
+  },
+  {
+    "bairro": "Bongi",
+    "distrito_sanitario": "5",
+    "descricao_distrito": "DS V"
+  },
+  {
+    "bairro": "Cacote",
+    "distrito_sanitario": "5",
+    "descricao_distrito": "DS V"
+  },
+  {
+    "bairro": "Coqueiral",
+    "distrito_sanitario": "5",
+    "descricao_distrito": "DS V"
+  },
+  {
+    "bairro": "Curado",
+    "distrito_sanitario": "5",
+    "descricao_distrito": "DS V"
+  },
+  {
+    "bairro": "Estancia",
+    "distrito_sanitario": "5",
+    "descricao_distrito": "DS V"
+  },
+  {
+    "bairro": "Jardim Sao Paulo",
+    "distrito_sanitario": "5",
+    "descricao_distrito": "DS V"
+  },
+  {
+    "bairro": "Jiquia",
+    "distrito_sanitario": "5",
+    "descricao_distrito": "DS V"
+  },
+  {
+    "bairro": "Mangueira",
+    "distrito_sanitario": "5",
+    "descricao_distrito": "DS V"
+  },
+  {
+    "bairro": "Mustardinha",
+    "distrito_sanitario": "5",
+    "descricao_distrito": "DS V"
+  },
+  {
+    "bairro": "San Martin",
+    "distrito_sanitario": "5",
+    "descricao_distrito": "DS V"
+  },
+  {
+    "bairro": "Sancho",
+    "distrito_sanitario": "5",
+    "descricao_distrito": "DS V"
+  },
+  {
+    "bairro": "Tejipio",
+    "distrito_sanitario": "5",
+    "descricao_distrito": "DS V"
+  },
+  {
+    "bairro": "Toto",
+    "distrito_sanitario": "5",
+    "descricao_distrito": "DS V"
+  },
+  {
+    "bairro": "Boa Viagem",
+    "distrito_sanitario": "6",
+    "descricao_distrito": "DS VI"
+  },
+  {
+    "bairro": "Brasilia Teimosa",
+    "distrito_sanitario": "6",
+    "descricao_distrito": "DS VI"
+  },
+  {
+    "bairro": "Imbiribeira",
+    "distrito_sanitario": "6",
+    "descricao_distrito": "DS VI"
+  },
+  {
+    "bairro": "IPSEP",
+    "distrito_sanitario": "6",
+    "descricao_distrito": "DS VI"
+  },
+  {
+    "bairro": "Pina",
+    "distrito_sanitario": "6",
+    "descricao_distrito": "DS VI"
+  },
+  {
+    "bairro": "Brejo de Beberibe",
+    "distrito_sanitario": "7",
+    "descricao_distrito": "DS VII"
+  },
+  {
+    "bairro": "Cohab",
+    "distrito_sanitario": "7",
+    "descricao_distrito": "DS VII"
+  },
+  {
+    "bairro": "Ibura",
+    "distrito_sanitario": "7",
+    "descricao_distrito": "DS VII"
+  },
+  {
+    "bairro": "Jordao",
+    "distrito_sanitario": "7",
+    "descricao_distrito": "DS VII"
+  },
+  {
+    "bairro": "Alto Jose Bonifacio",
+    "distrito_sanitario": "8",
+    "descricao_distrito": "DS VIII"
+  },
+  {
+    "bairro": "Alto Jose do Pinho",
+    "distrito_sanitario": "8",
+    "descricao_distrito": "DS VIII"
+  },
+  {
+    "bairro": "Brejo da Guabiraba",
+    "distrito_sanitario": "8",
+    "descricao_distrito": "DS VIII"
+  },
+  {
+    "bairro": "Corrego do Jenipapo",
+    "distrito_sanitario": "8",
+    "descricao_distrito": "DS VIII"
+  },
+  {
+    "bairro": "Guabiraba",
+    "distrito_sanitario": "8",
+    "descricao_distrito": "DS VIII"
+  },
+  {
+    "bairro": "Macaxeira",
+    "distrito_sanitario": "8",
+    "descricao_distrito": "DS VIII"
+  },
+  {
+    "bairro": "Mangabeira",
+    "distrito_sanitario": "8",
+    "descricao_distrito": "DS VIII"
+  },
+  {
+    "bairro": "Morro da Conceicao",
+    "distrito_sanitario": "8",
+    "descricao_distrito": "DS VIII"
+  },
+  {
+    "bairro": "Nova Descoberta",
+    "distrito_sanitario": "8",
+    "descricao_distrito": "DS VIII"
+  },
+  {
+    "bairro": "Passarinho",
+    "distrito_sanitario": "8",
+    "descricao_distrito": "DS VIII"
+  },
+  {
+    "bairro": "Pau Ferro",
+    "distrito_sanitario": "8",
+    "descricao_distrito": "DS VIII"
+  },
+  {
+    "bairro": "Vasco da Gama",
+    "distrito_sanitario": "8",
+    "descricao_distrito": "DS VIII"
+  }
+]
