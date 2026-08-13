@@ -15,6 +15,7 @@ PASTA_BRONZE = os.path.join(os.path.dirname(__file__), "..", "..", "data", "bron
 
 MAPEAMENTO_ARQUIVO_COLECAO = {
     "estabelecimentos_recife": "cnes_estabelecimentos",
+    "estabelecimentos_detalhe_recife": "cnes_estabelecimentos_detalhe",
     "equipes_recife": "cnes_equipes",
     "censo_raca_cor_recife": "ibge_censo_raca_cor",
     "censo_deficiencia_tipo_recife": "ibge_censo_deficiencia_tipo",
