@@ -1,5 +1,6 @@
 requests
 pymongo
-neo4j
+psycopg2-binary
+sqlalchemy
 python-dotenv
 pandas
