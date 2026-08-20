@@ -17,11 +17,20 @@ Os dados existem no PEC/e-SUS, mas estão dispersos em diferentes campos e exige
 ```
 APIs públicas → arquivos JSON locais (bronze) → MongoDB Atlas (bronze)
                                                         │
-                                          (próxima etapa: Silver → Neo4j)
+                                    transformação e limpeza (silver)
+                                                        │
+                                              Neon / PostgreSQL (silver)
+                                                        │
+                                    ┌───────────────────┴───────────────────┐
+                                    │                                       │
+                          Metabase (dashboards)              Agente de perguntas em linguagem
+                                                              natural (Ollama, local, sem API paga)
 ```
 
 - **Extração (`src/extract/`)**: um script por fonte de dado, que consulta a API pública e salva o resultado bruto em `data/bronze/<fonte>/`, sem nenhuma transformação.
-- **Carga (`src/load_bronze/`)**: lê os arquivos salvos e insere cada um em uma coleção própria no MongoDB Atlas, adicionando metadados de rastreabilidade (`_meta`: arquivo de origem e data/hora da carga).
+- **Carga bronze (`src/load_bronze/`)**: lê os arquivos salvos e insere cada um em uma coleção própria no MongoDB Atlas, adicionando metadados de rastreabilidade (`_meta`: arquivo de origem e data/hora da carga).
+- **Transformação silver (`src/transform/`)**: lê as coleções do MongoDB, limpa e organiza os dados em tabelas relacionais, e carrega no Neon/PostgreSQL.
+- **Agente (`src/agent/`)**: responde perguntas em português sobre os dados do Neon, usando um LLM local (Ollama) para gerar SQL e formular a resposta — sem depender de nenhuma API paga.
 
 ## Fontes de dados utilizadas
 
@@ -66,46 +75,7 @@ Nenhuma das fontes abaixo é o PEC/e-SUS. São todas fontes **públicas**, usada
 
 Nenhuma fonte pública consultada tem dados sobre **orientação sexual, identidade de gênero, nome social ou raça/cor por pessoa cadastrada na APS**. Essas informações existem exclusivamente no cadastro individual do PEC/e-SUS. Ou seja, o que este pipeline entrega hoje é a **infraestrutura de apoio** (território, unidade, equipe, baseline populacional) — os indicadores centrais do desafio (quantitativo de pessoas LGBTQIAPN+, perfil de PCD e população negra cadastradas) só poderão ser calculados após a integração com o PEC.
 
-## Estrutura de pastas
-
-```
-Projeto - BD/
-├── .env                        # credenciais (MongoDB) — não versionado
-├── requirements.txt
-├── data/
-│   └── bronze/                 # arquivos JSON brutos, por fonte
-│       ├── cnes/
-│       ├── ibge/
-│       └── dados_recife/
-└── src/
-    ├── extract/                # um script por fonte de dado
-    │   ├── cnes_estabelecimentos.py
-    │   ├── cnes_equipes.py
-    │   ├── ibge_censo_raca_cor.py
-    │   ├── ibge_censo_deficiencia.py
-    │   ├── dados_recife_distritos_geometria.py
-    │   └── dados_recife_distritos_bairros.py
-    └── load_bronze/
-        ├── testar_conexao_mongo.py
-        └── carregar_mongo.py   # sobe todos os arquivos bronze para o MongoDB
-```
-
-## Como rodar
-
-```bash
-# 1. Extrair os dados das APIs (gera os arquivos em data/bronze/)
-python src/extract/cnes_estabelecimentos.py
-python src/extract/cnes_equipes.py
-python src/extract/ibge_censo_raca_cor.py
-python src/extract/ibge_censo_deficiencia.py
-python src/extract/dados_recife_distritos_geometria.py
-python src/extract/dados_recife_distritos_bairros.py
-
-# 2. Carregar tudo no MongoDB
-python src/load_bronze/carregar_mongo.py
-```
-
-## Banco de dados (MongoDB Atlas)
+## Banco de dados (MongoDB Atlas — camada bronze)
 
 **Banco**: `bronze_equidade_saude`
 
@@ -118,9 +88,90 @@ python src/load_bronze/carregar_mongo.py
 | `dados_recife_distritos_geometria` | 1 (GeoJSON com os 8 distritos) |
 | `dados_recife_distritos_bairros` | 94 |
 
+## Banco de dados (Neon/PostgreSQL — camada silver)
+
+Tabelas relacionais, já limpas e prontas para consumo (dashboards e agente):
+
+| Tabela | Linhas | Conteúdo |
+|---|---|---|
+| `unidades_saude` | 521 | Unidades de saúde do Recife, com distrito sanitário, bairro, endereço e coordenadas |
+| `equipes_saude` | 827 | Equipes vinculadas a cada unidade, com data de ativação/desativação |
+| `censo_raca_cor` | 5 | População do Recife por raça/cor (Censo 2022) |
+| `censo_deficiencia` | 6 | População do Recife por tipo de deficiência (Censo 2022) + total oficial (`e_total`) |
+
+**Achado de qualidade de dados**: uma parte das unidades de saúde não tem `distrito_sanitario_codigo` preenchido no CNES (hospitais, laboratórios e outros estabelecimentos que não pertencem a um Distrito Sanitário). Essa lacuna foi mantida — e não "corrigida" artificialmente — porque é uma inconsistência real que a Secretaria precisa ver e resolver na fonte.
+
+**Cuidado estatístico**: em `censo_deficiencia`, os tipos de dificuldade não são mutuamente exclusivos (uma pessoa pode ter mais de um tipo) — por isso a coluna `e_total` identifica a linha com o total oficial, que não deve ser recalculado somando as categorias.
+
+## Agente de perguntas em linguagem natural
+
+Permite perguntar em português sobre os dados do Neon (ex.: *"Quantas unidades de saúde tem no Distrito Sanitário I?"*) e receber uma resposta direta. Roda 100% local, sem nenhuma API paga:
+
+1. O LLM local (`llama3.2`, via [Ollama](https://ollama.com)) traduz a pergunta em SQL.
+2. O SQL é executado no Neon (só `SELECT` é permitido, por segurança).
+3. O resultado é formatado em português — respostas de um único número são montadas diretamente pelo código (mais confiável); resultados com várias linhas passam pelo LLM para virar uma frase.
+
+Arquivos: `src/agent/assistente.py` (motor) e `src/agent/app_streamlit.py` (interface web).
+
+## Estrutura de pastas
+
+```
+Projeto - BD/
+├── .env                        # credenciais (MongoDB, Neon) — não versionado
+├── requirements.txt
+├── data/
+│   └── bronze/                 # arquivos JSON brutos, por fonte
+│       ├── cnes/
+│       ├── ibge/
+│       └── dados_recife/
+└── src/
+    ├── extract/                # um script por fonte de dado
+    │   ├── cnes_estabelecimentos.py
+    │   ├── cnes_estabelecimentos_detalhe.py
+    │   ├── cnes_equipes.py
+    │   ├── ibge_censo_raca_cor.py
+    │   ├── ibge_censo_deficiencia.py
+    │   ├── dados_recife_distritos_geometria.py
+    │   └── dados_recife_distritos_bairros.py
+    ├── load_bronze/
+    │   └── carregar_mongo.py   # sobe todos os arquivos bronze para o MongoDB
+    ├── transform/
+    │   └── mongo_para_neon.py  # limpa e carrega os dados do Mongo (bronze) no Neon (silver)
+    ├── agent/
+    │   ├── assistente.py       # motor do agente (SQL + resposta via Ollama)
+    │   ├── app_streamlit.py    # interface web do agente
+    │   └── testar_ollama.py    # script de teste da conexão com o Ollama
+    └── utils/
+        ├── testar_conexao_mongo.py
+        └── testar_conexao_neon.py
+```
+
+## Como rodar
+
+```bash
+# 1. Extrair os dados das APIs (gera os arquivos em data/bronze/)
+python src/extract/cnes_estabelecimentos.py
+python src/extract/cnes_estabelecimentos_detalhe.py
+python src/extract/cnes_equipes.py
+python src/extract/ibge_censo_raca_cor.py
+python src/extract/ibge_censo_deficiencia.py
+python src/extract/dados_recife_distritos_geometria.py
+python src/extract/dados_recife_distritos_bairros.py
+
+# 2. Carregar tudo no MongoDB (bronze)
+python src/load_bronze/carregar_mongo.py
+
+# 3. Transformar e carregar no Neon (silver)
+python src/transform/mongo_para_neon.py
+
+# 4. Rodar o agente de perguntas
+ollama pull llama3.2          # uma vez só, baixa o modelo local
+streamlit run src/agent/app_streamlit.py
+```
+
 ## Próximas etapas
 
-1. **Silver**: limpeza e cruzamento — por exemplo, juntar `cnes_estabelecimentos` (que tem o bairro de cada unidade) com `dados_recife_distritos_bairros`, para gerar uma tabela pronta de "Unidade de Saúde → Bairro → Distrito Sanitário".
-2. **Gold (Neo4j)**: modelar o grafo de Território, Unidade, Equipe — preparando a estrutura para receber os dados do PEC.
-3. **Integração com o PEC/e-SUS APS**: pendente de liberação de acesso pela Secretaria — é o que vai permitir calcular os indicadores centrais do desafio (LGBTQIAPN+, PCD, população negra).
-4. **Consumo**: painéis (Power BI), agente/chatbot e modelo de aprendizado de máquina, cruzando os dados públicos com o PEC.
+1. **Dashboards (Metabase)**: painel com indicadores de contexto territorial e populacional (unidades e equipes por distrito, população por raça/cor e deficiência, e o achado de qualidade de dados).
+2. **Mais validação do agente**: cobrir perguntas fora do escopo atual (ex.: dados que ainda não existem, como LGBTQIAPN+) para garantir que ele admita a limitação em vez de inventar uma resposta.
+3. **Integração com o PEC/e-SUS APS**: pendente de liberação de acesso pela Secretaria — é o que vai permitir calcular os indicadores centrais do desafio (LGBTQIAPN+, PCD, população negra) cruzados por unidade de saúde.
+
