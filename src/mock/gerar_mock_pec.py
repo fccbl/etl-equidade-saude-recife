@@ -51,6 +51,12 @@ IDENTIDADE_GENERO_PESOS = [46, 46, 2, 2, 2, 2]
 PROFISSIONAL_TIPOS = ["ACS", "Enfermeiro", "Médico"]
 PROFISSIONAL_PESOS = [60, 25, 15]
 
+# ACS pergunta/preenche menos que Enfermeiro/Médico — é a dor relatada pela
+# Secretaria, e precisa estar de fato no dado simulado (não só no discurso),
+# senão o filtro "profissional_tipo = ACS" no dashboard e a feature de ML
+# "tipo de profissional" não teriam nenhuma base real por trás.
+MULTIPLICADOR_PREENCHIMENTO_POR_PROFISSIONAL = {"ACS": 0.7, "Enfermeiro": 1.0, "Médico": 1.05}
+
 MESES = ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08"]
 
 # distribuição ILUSTRATIVA da população negra por Distrito Sanitário — não é
@@ -103,8 +109,11 @@ def gerar_atendimento(id_atendimento, equipe, taxas, mes_index, mes):
         weights=[0.12, 0.10, 0.55, 0.23],
     )[0]
 
+    profissional_tipo = random.choices(PROFISSIONAL_TIPOS, weights=PROFISSIONAL_PESOS)[0]
+    multiplicador_profissional = MULTIPLICADOR_PREENCHIMENTO_POR_PROFISSIONAL[profissional_tipo]
+
     raca_cor = None
-    if random.random() < min(taxas["raca_cor"] * fator_evolucao, 0.99):
+    if random.random() < min(taxas["raca_cor"] * fator_evolucao * multiplicador_profissional, 0.99):
         pesos_raca_cor = (
             RACA_COR_PESOS_ANOMALIA
             if equipe["distrito_sanitario_codigo"] == DISTRITO_ANOMALIA_RACA_COR
@@ -113,7 +122,7 @@ def gerar_atendimento(id_atendimento, equipe, taxas, mes_index, mes):
         raca_cor = random.choices(RACA_COR_CATEGORIAS, weights=pesos_raca_cor)[0]
 
     deficiencia_tipo = None
-    if random.random() < min(taxas["deficiencia"] * fator_evolucao, 0.99):
+    if random.random() < min(taxas["deficiencia"] * fator_evolucao * multiplicador_profissional, 0.99):
         deficiencia_tipo = random.choice(DEFICIENCIA_CATEGORIAS) if random.random() < 0.18 else "Nenhuma"
 
     deseja_informar_orientacao = None
@@ -123,13 +132,13 @@ def gerar_atendimento(id_atendimento, equipe, taxas, mes_index, mes):
     nome_social = None
 
     if idade >= 10:  # regra da Secretaria: crianças de 0 a 10 anos ficam fora da análise LGBTQIAPN+
-        perguntou_orientacao = random.random() < min(taxas["pergunta_orientacao"] * fator_evolucao, 0.99)
+        perguntou_orientacao = random.random() < min(taxas["pergunta_orientacao"] * fator_evolucao * multiplicador_profissional, 0.99)
         if perguntou_orientacao:
             deseja_informar_orientacao = "Sim" if random.random() < 0.55 else "Não"
             if deseja_informar_orientacao == "Sim":
                 orientacao_sexual = random.choices(ORIENTACAO_SEXUAL_CATEGORIAS, weights=ORIENTACAO_SEXUAL_PESOS)[0]
 
-        perguntou_genero = random.random() < min(taxas["pergunta_genero"] * fator_evolucao, 0.99)
+        perguntou_genero = random.random() < min(taxas["pergunta_genero"] * fator_evolucao * multiplicador_profissional, 0.99)
         if perguntou_genero:
             deseja_informar_genero = "Sim" if random.random() < 0.55 else "Não"
             if deseja_informar_genero == "Sim":
@@ -144,7 +153,7 @@ def gerar_atendimento(id_atendimento, equipe, taxas, mes_index, mes):
         "distrito_sanitario_codigo": equipe["distrito_sanitario_codigo"],
         "data_atendimento": data_atendimento,
         "tipo_atendimento": random.choices(["Primeira consulta", "Retorno"], weights=[35, 65])[0],
-        "profissional_tipo": random.choices(PROFISSIONAL_TIPOS, weights=PROFISSIONAL_PESOS)[0],
+        "profissional_tipo": profissional_tipo,
         "idade": idade,
         "raca_cor": raca_cor,
         "deficiencia_tipo": deficiencia_tipo,

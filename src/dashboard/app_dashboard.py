@@ -270,7 +270,7 @@ with aba2:
         ORDER BY "% Preenchimento" ASC
         LIMIT 15
     """)
-    st.subheader("Ranking de Equipes por Preenchimento (piores primeiro, atendimentos de ACS)")
+    st.subheader("Ranking de Equipes por Preenchimento")
     st.dataframe(df, use_container_width=True)
 
     df = consultar("""
