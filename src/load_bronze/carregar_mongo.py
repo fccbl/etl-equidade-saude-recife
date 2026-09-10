@@ -21,6 +21,8 @@ MAPEAMENTO_ARQUIVO_COLECAO = {
     "censo_deficiencia_tipo_recife": "ibge_censo_deficiencia_tipo",
     "distritos_sanitarios": "dados_recife_distritos_geometria",
     "distritos_bairros": "dados_recife_distritos_bairros",
+    "atendimentos_mock": "mock_pec_atendimentos",
+    "populacao_negra_distrito_mock": "mock_populacao_negra_distrito",
 }
 
 
@@ -51,6 +53,8 @@ def inserir_no_mongo(banco, colecao, dados, nome_arquivo):
             "arquivo_origem": nome_arquivo,
             "carregado_em": agora,
         }
+        if colecao.startswith("mock_"):
+            documento["_meta"]["aviso"] = "SIMULADO — não representa dados reais"
 
     banco[colecao].delete_many({})  # limpa a coleção antes de recarregar
     if documentos:

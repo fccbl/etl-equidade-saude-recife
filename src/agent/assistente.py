@@ -167,6 +167,127 @@ SQL: SELECT COUNT(*) FROM equipes_saude WHERE data_desativacao IS NULL;
 
 Pergunta: Quantas equipes já foram desativadas?
 SQL: SELECT COUNT(*) FROM equipes_saude WHERE data_desativacao IS NOT NULL;
+
+mock_pec_atendimentos(
+    id_atendimento INTEGER, codigo_equipe TEXT, cnes_unidade TEXT,
+    distrito_sanitario_codigo TEXT, data_atendimento DATE, tipo_atendimento TEXT,
+    profissional_tipo TEXT, idade INTEGER, raca_cor TEXT, deficiencia_tipo TEXT,
+    deseja_informar_orientacao_sexual TEXT, orientacao_sexual TEXT,
+    deseja_informar_identidade_genero TEXT, identidade_genero TEXT, nome_social TEXT
+)
+
+IMPORTANTE: esta tabela contém dados FICTÍCIOS/SIMULADOS (não são pacientes
+reais), gerados para testar o pipeline enquanto o acesso ao PEC/e-SUS real não
+é liberado pela Secretaria. Um atendimento por linha, ligado a uma equipe de
+saúde real.
+
+Sobre distrito_sanitario_codigo nesta tabela: usa o MESMO código de dois
+dígitos ('01' a '08') que a tabela unidades_saude — mesma regra de conversão
+romano→código já explicada acima.
+
+Sobre profissional_tipo: valores possíveis são 'ACS', 'Enfermeiro', 'Médico'.
+Quando a pergunta mencionar "agentes comunitários" ou "ACS", filtre com
+WHERE profissional_tipo = 'ACS'.
+
+Sobre raca_cor nesta tabela: mesmas 5 categorias de censo_raca_cor ('Branca',
+'Preta', 'Parda', 'Amarela', 'Indígena'), OU NULL quando o campo não foi
+preenchido no atendimento (simulando o sub-registro real). COUNT(raca_cor) em
+SQL já ignora os NULL automaticamente, não precisa de WHERE extra.
+
+Sobre deficiencia_tipo nesta tabela: um dos 5 tipos de dificuldade (mesmos
+textos de censo_deficiencia, exceto 'Total'), OU 'Nenhuma' (a pessoa foi
+perguntada e não tem deficiência — isso CONTA como campo preenchido), OU NULL
+quando o campo não foi perguntado/preenchido. Para completude, use
+COUNT(deficiencia_tipo), que conta 'Nenhuma' como preenchido corretamente e
+ignora só os NULL.
+
+Sobre orientação sexual e identidade de gênero — ESTRUTURA EM DUAS ETAPAS,
+igual ao PEC real:
+- deseja_informar_orientacao_sexual: 'Sim', 'Não', ou NULL.
+  NULL = o profissional NUNCA perguntou (campo em branco — o problema mais
+  grave, ligado à falta de capacitação do ACS).
+  'Não' = o profissional perguntou, mas a pessoa não quis informar.
+  'Sim' = a pessoa informou, e a categoria está na coluna orientacao_sexual.
+- orientacao_sexual: só é preenchida quando deseja_informar_orientacao_sexual
+  = 'Sim'. Valores possíveis: 'Heterossexual', 'Gay', 'Lésbica', 'Bissexual',
+  'Assexual', 'Pansexual', 'Outro'.
+- A mesma lógica de três estados se repete para
+  deseja_informar_identidade_genero / identidade_genero. Valores possíveis de
+  identidade_genero: 'Mulher cisgênero', 'Homem cisgênero', 'Mulher trans',
+  'Homem trans', 'Não-binário', 'Outro'.
+- nome_social: preenchido só quando identidade_genero é 'Mulher trans' ou
+  'Homem trans'.
+
+Regra de negócio definida pela Secretaria: atendimentos de pessoas com
+idade < 10 NUNCA têm orientação sexual ou identidade de gênero preenchidas —
+isso é esperado, não é erro nem falta de preenchimento pelo ACS.
+
+Definição de "completude" (proporção de campo preenchido, para ranking e KPI
+— sempre multiplique por 100 e use ROUND(..., 1) se a pergunta pedir
+percentual):
+- Completude de raça/cor: COUNT(raca_cor)::numeric / COUNT(*)
+- Completude de deficiência: COUNT(deficiencia_tipo)::numeric / COUNT(*)
+- Completude de orientação sexual (o profissional pelo menos perguntou):
+  COUNT(deseja_informar_orientacao_sexual)::numeric / COUNT(*)
+- Completude de identidade de gênero: mesma lógica com
+  deseja_informar_identidade_genero
+
+Definição de "população LGBTQIAPN+" nesta tabela: pessoas cuja
+orientacao_sexual NÃO é 'Heterossexual' (e não é nula) OU cujo
+identidade_genero está em ('Mulher trans', 'Homem trans', 'Não-binário'). Use
+OR entre as duas condições, nunca considere só uma isoladamente.
+
+mock_populacao_negra_distrito(
+    distrito_sanitario_codigo TEXT, populacao_negra_pct_esperado NUMERIC
+)
+
+IMPORTANTE: esta tabela também é FICTÍCIA/SIMULADA — é um percentual
+ilustrativo de referência, não o dado real do Censo por distrito (que não
+existe nessa granularidade). populacao_negra_pct_esperado é um número entre 0
+e 1 (ex.: 0.42 significa 42%).
+
+Para comparar o percentual observado de população negra num distrito (a
+partir de mock_pec_atendimentos) com o esperado (mock_populacao_negra_distrito),
+faça um JOIN pelas duas tabelas usando distrito_sanitario_codigo.
+
+Pergunta: Quantos atendimentos fictícios existem no total na base de simulação?
+SQL: SELECT COUNT(*) FROM mock_pec_atendimentos;
+
+Pergunta: Qual a taxa de completude do campo raça/cor?
+SQL: SELECT ROUND(COUNT(raca_cor)::numeric / COUNT(*) * 100, 1) FROM mock_pec_atendimentos;
+
+Pergunta: Quantos atendimentos têm o campo de orientação sexual em branco, ou seja, nunca perguntado?
+SQL: SELECT COUNT(*) FROM mock_pec_atendimentos WHERE deseja_informar_orientacao_sexual IS NULL;
+
+Pergunta: Quais são as 5 equipes com pior completude de orientação sexual, considerando só atendimentos feitos por ACS?
+SQL: SELECT codigo_equipe, ROUND(COUNT(deseja_informar_orientacao_sexual)::numeric / COUNT(*) * 100, 1) AS completude FROM mock_pec_atendimentos WHERE profissional_tipo = 'ACS' GROUP BY codigo_equipe ORDER BY completude ASC LIMIT 5;
+
+Pergunta: Quantas pessoas informaram identidade de gênero trans?
+SQL: SELECT COUNT(*) FROM mock_pec_atendimentos WHERE identidade_genero IN ('Mulher trans', 'Homem trans');
+
+Pergunta: Quantas pessoas se identificam como LGBTQIAPN+?
+SQL: SELECT COUNT(*) FROM mock_pec_atendimentos WHERE (orientacao_sexual IS NOT NULL AND orientacao_sexual != 'Heterossexual') OR identidade_genero IN ('Mulher trans', 'Homem trans', 'Não-binário');
+
+Pergunta: Quantas pessoas com deficiência foram atendidas?
+SQL: SELECT COUNT(*) FROM mock_pec_atendimentos WHERE deficiencia_tipo IS NOT NULL AND deficiencia_tipo != 'Nenhuma';
+
+Pergunta: Qual equipe tem a pior completude do campo raça/cor?
+SQL: SELECT codigo_equipe, ROUND(COUNT(raca_cor)::numeric / COUNT(*) * 100, 1) AS completude FROM mock_pec_atendimentos GROUP BY codigo_equipe ORDER BY completude ASC LIMIT 1;
+
+Pergunta: Em qual distrito sanitário há mais pessoas LGBTQIAPN+ registradas?
+SQL: SELECT distrito_sanitario_codigo, COUNT(*) AS total FROM mock_pec_atendimentos WHERE (orientacao_sexual IS NOT NULL AND orientacao_sexual != 'Heterossexual') OR identidade_genero IN ('Mulher trans', 'Homem trans', 'Não-binário') GROUP BY distrito_sanitario_codigo ORDER BY total DESC LIMIT 1;
+
+Pergunta: Quantos atendimentos foram feitos por agentes comunitários de saúde?
+SQL: SELECT COUNT(*) FROM mock_pec_atendimentos WHERE profissional_tipo = 'ACS';
+
+Pergunta: Qual a idade média dos pacientes atendidos?
+SQL: SELECT ROUND(AVG(idade), 1) FROM mock_pec_atendimentos;
+
+Pergunta: Qual distrito tem o maior gap entre população negra esperada e observada?
+SQL: SELECT a.distrito_sanitario_codigo, p.populacao_negra_pct_esperado, ROUND(COUNT(*) FILTER (WHERE a.raca_cor IN ('Preta','Parda'))::numeric / COUNT(a.raca_cor), 3) AS pct_observado FROM mock_pec_atendimentos a JOIN mock_populacao_negra_distrito p ON p.distrito_sanitario_codigo = a.distrito_sanitario_codigo GROUP BY a.distrito_sanitario_codigo, p.populacao_negra_pct_esperado ORDER BY (p.populacao_negra_pct_esperado - (COUNT(*) FILTER (WHERE a.raca_cor IN ('Preta','Parda'))::numeric / COUNT(a.raca_cor))) DESC LIMIT 1;
+
+Pergunta: Quantos atendimentos de crianças menores de 10 anos existem?
+SQL: SELECT COUNT(*) FROM mock_pec_atendimentos WHERE idade < 10;
 """
 
 
@@ -203,6 +324,16 @@ def rodar_sql(sql):
     return colunas, linhas
 
 
+def formatar_numero_br(valor):
+    valor_float = float(valor)
+    parte_inteira = int(valor_float)
+    inteira_formatada = f"{parte_inteira:,}".replace(",", ".")
+    if valor_float == parte_inteira:
+        return inteira_formatada
+    texto_decimal = f"{abs(valor_float - parte_inteira):.1f}".split(".")[1]
+    return f"{inteira_formatada},{texto_decimal}"
+
+
 def gerar_resposta_em_texto(pergunta, colunas, linhas):
     dados_formatados = "\n".join(
         ", ".join(f"{col}: {valor}" for col, valor in zip(colunas, linha))
@@ -216,7 +347,7 @@ def gerar_resposta_em_texto(pergunta, colunas, linhas):
     if len(linhas) == 1 and len(colunas) == 1:
         valor = linhas[0][0]
         if isinstance(valor, (int, float, Decimal)):
-            valor = f"{int(valor):,}".replace(",", ".")
+            valor = formatar_numero_br(valor)
         return f"A resposta é {valor}."
 
     prompt = f"""Reescreva os dados abaixo como uma frase em português, de forma
@@ -240,7 +371,12 @@ def responder_pergunta(pergunta):
     print(f"[SQL gerado pelo modelo]: {sql}\n")
 
     colunas, linhas = rodar_sql(sql)
-    return gerar_resposta_em_texto(pergunta, colunas, linhas)
+    resposta = gerar_resposta_em_texto(pergunta, colunas, linhas)
+
+    if "mock_" in sql.lower():
+        resposta += " (dado simulado, para fins de demonstração — não representa a realidade de Recife)"
+
+    return resposta
 
 
 if __name__ == "__main__":
