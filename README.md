@@ -36,8 +36,8 @@ Um pipeline de dados em camadas (arquitetura medalhão), desenhado para funciona
                     │
       ┌─────────────┴─────────────┐
       │                           │
-Dashboard (Streamlit + Plotly)   Agente de perguntas em linguagem
-                                  natural (Ollama, local, sem API paga)
+Dashboard (Streamlit + Plotly + Folium)   Agente de perguntas em linguagem
+                                           natural (Ollama, local, sem API paga)
 ```
 
 - **Extração (`src/extract/`)**: um script por fonte pública, que consulta a API e salva o resultado bruto em `data/bronze/<fonte>/`, sem transformação.
@@ -139,12 +139,12 @@ Permite perguntar em português sobre os dados do Neon e receber uma resposta di
 
 Arquivos: `src/agent/assistente.py` (motor) e `src/agent/app_streamlit.py` (interface web).
 
-## Dashboard (Streamlit + Plotly)
+## Dashboard (Streamlit + Plotly + Folium)
 
 Camada de consumo/visualização — substitui o Metabase, que exigia login e não permitia depuração direta do código. Duas abas:
 
 - **Contexto Estrutural**: 7 gráficos com dado real (CNES + Censo) — total de unidades/equipes, distribuição por distrito e tipo, população por raça/cor e deficiência, e a tabela do achado de qualidade (unidades sem Distrito Sanitário).
-- **Equidade e Qualidade do Cadastro**: 10 gráficos com dado fictício (`mock_pec_atendimentos`) — KPIs de preenchimento, 3 mapas de calor com o GeoJSON real dos Distritos Sanitários (concentração LGBTQIAPN+, concentração PCD com filtro por tipo, gap racial Censo × observado), distribuição de raça/cor por distrito (detecção de inconsistência de cadastro), ranking de equipes por preenchimento, evolução no tempo, e inconsistências de orientação sexual.
+- **Equidade e Qualidade do Cadastro**: 10 gráficos com dado fictício (`mock_pec_atendimentos`) — KPIs de preenchimento, 3 mapas de calor em Folium com o GeoJSON real dos Distritos Sanitários (concentração LGBTQIAPN+, concentração PCD com filtro por tipo, gap racial Censo × observado), distribuição de raça/cor por distrito (detecção de inconsistência de cadastro), ranking de equipes por preenchimento, evolução no tempo, e inconsistências de orientação sexual.
 
 Arquivo: `src/dashboard/app_dashboard.py`.
 
@@ -181,7 +181,7 @@ Projeto - BD/
     │   ├── app_streamlit.py        # interface web do agente
     │   └── testar_ollama.py        # script de teste da conexão com o Ollama
     ├── dashboard/
-    │   └── app_dashboard.py        # dashboard de visualização (Streamlit + Plotly)
+    │   └── app_dashboard.py        # dashboard de visualização (Streamlit + Plotly + Folium)
     └── utils/
         ├── testar_conexao_mongo.py
         ├── testar_conexao_neon.py

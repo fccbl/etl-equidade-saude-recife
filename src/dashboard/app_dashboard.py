@@ -1,6 +1,7 @@
 """
 Dashboard EquiDados — mesmas queries planejadas para o Metabase, renderizadas
-em Streamlit + Plotly (mapas com o GeoJSON real dos Distritos Sanitários).
+em Streamlit, com gráficos em Plotly e mapas em Folium (GeoJSON real dos
+Distritos Sanitários).
 
 Rodar com: streamlit run src/dashboard/app_dashboard.py
 """
@@ -8,11 +9,13 @@ Rodar com: streamlit run src/dashboard/app_dashboard.py
 import json
 import os
 
+import folium
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
+from streamlit_folium import st_folium
 
 load_dotenv()
 
@@ -32,6 +35,15 @@ CORES_RACA_COR = {
     "Amarela": "#AB63FA",
     "Indígena": "#FFA15A",
 }
+
+# Cores e ordem fixas pro gráfico de inconsistências — reforça a leitura como
+# uma escala (do "sem dado" ao "dado completo"), não uma lista solta.
+CORES_INCONSISTENCIA = {
+    "Campo em branco": "#B0B0B0",
+    "Recusou informar": "#F0A03C",
+    "Informou": "#2E9E5B",
+}
+ORDEM_INCONSISTENCIA = ["Campo em branco", "Recusou informar", "Informou"]
 
 # Rótulos curtos pra exibir no seletor de tipo de deficiência (o texto completo
 # do Censo é longo demais pra caber na caixa de seleção).
@@ -67,20 +79,40 @@ def consultar(sql, params=None):
 def mapa_distrito(df, coluna_valor, titulo, escala="Oranges", rotulo_valor=None):
     df = df.copy()
     df["cdistscodi"] = df["cdistscodi"].astype(str)
-    fig = px.choropleth(
-        df,
-        geojson=carregar_geojson(),
-        locations="cdistscodi",
-        featureidkey="properties.cdistscodi",
-        color=coluna_valor,
-        color_continuous_scale=escala,
-        projection="mercator",
-        title=titulo,
-        labels={"cdistscodi": "Distrito", coluna_valor: rotulo_valor or coluna_valor},
-    )
-    fig.update_geos(fitbounds="locations", visible=False)
-    fig.update_layout(margin=dict(l=0, r=0, t=40, b=0))
-    return fig
+    rotulo = rotulo_valor or coluna_valor
+
+    geojson = carregar_geojson()
+    geojson_com_valor = json.loads(json.dumps(geojson))
+    valores = dict(zip(df["cdistscodi"], df[coluna_valor]))
+    for feature in geojson_com_valor["features"]:
+        codigo = feature["properties"]["cdistscodi"]
+        feature["properties"]["valor_tooltip"] = valores.get(codigo, 0)
+
+    mapa = folium.Map(location=[-8.05, -34.90], zoom_start=11, tiles="OpenStreetMap")
+
+    folium.Choropleth(
+        geo_data=geojson_com_valor,
+        data=df,
+        columns=["cdistscodi", coluna_valor],
+        key_on="feature.properties.cdistscodi",
+        fill_color=escala,
+        fill_opacity=0.75,
+        line_opacity=0.4,
+        legend_name=rotulo,
+        nan_fill_color="white",
+    ).add_to(mapa)
+
+    folium.GeoJson(
+        geojson_com_valor,
+        style_function=lambda x: {"fillOpacity": 0, "weight": 0},
+        tooltip=folium.GeoJsonTooltip(
+            fields=["cdistscodi", "valor_tooltip"],
+            aliases=["Distrito", rotulo],
+        ),
+    ).add_to(mapa)
+
+    st.markdown(f"**{titulo}**")
+    return mapa
 
 
 st.title("EquiDados — Dashboards")
@@ -88,13 +120,14 @@ st.title("EquiDados — Dashboards")
 aba1, aba2 = st.tabs(["Contexto Estrutural", "Equidade e Qualidade do Cadastro"])
 
 with aba1:
-    col1, col2 = st.columns(2)
-    with col1:
-        df = consultar("SELECT COUNT(*) AS total FROM unidades_saude")
-        st.metric("Total de Unidades", int(df["total"][0]))
-    with col2:
-        df = consultar("SELECT COUNT(*) AS total FROM equipes_saude")
-        st.metric("Total de Equipes", int(df["total"][0]))
+    with st.container(border=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            df = consultar("SELECT COUNT(*) AS total FROM unidades_saude")
+            st.metric("Total de Unidades", int(df["total"][0]))
+        with col2:
+            df = consultar("SELECT COUNT(*) AS total FROM equipes_saude")
+            st.metric("Total de Equipes", int(df["total"][0]))
 
     df = consultar("""
         SELECT distrito_sanitario_nome, COUNT(*) AS total
@@ -103,8 +136,12 @@ with aba1:
         GROUP BY distrito_sanitario_nome
         ORDER BY distrito_sanitario_nome
     """)
+    st.subheader("Unidades por Distrito Sanitário")
     st.plotly_chart(
-        px.bar(df, x="distrito_sanitario_nome", y="total", title="Unidades por Distrito Sanitário"),
+        px.bar(
+            df, x="distrito_sanitario_nome", y="total",
+            labels={"distrito_sanitario_nome": "Distrito Sanitário", "total": "Quantidade de Unidades"},
+        ),
         use_container_width=True,
     )
 
@@ -114,14 +151,23 @@ with aba1:
         GROUP BY tipo_equipe
         ORDER BY total DESC
     """)
+    st.subheader("Equipes por Tipo")
     st.plotly_chart(
-        px.bar(df, x="tipo_equipe", y="total", title="Equipes por Tipo"),
+        px.bar(
+            df, x="tipo_equipe", y="total",
+            labels={"tipo_equipe": "Tipo de Equipe", "total": "Quantidade de Equipes"},
+        ),
         use_container_width=True,
     )
 
     df = consultar("SELECT raca_cor, populacao FROM censo_raca_cor ORDER BY populacao DESC")
+    st.subheader("População por Raça/Cor")
     st.plotly_chart(
-        px.bar(df, x="raca_cor", y="populacao", title="População por Raça/Cor"),
+        px.bar(
+            df, x="raca_cor", y="populacao", color="raca_cor",
+            color_discrete_map=CORES_RACA_COR,
+            labels={"raca_cor": "Raça/Cor", "populacao": "População"},
+        ).update_layout(showlegend=False),
         use_container_width=True,
     )
 
@@ -129,8 +175,12 @@ with aba1:
         SELECT tipo_dificuldade, populacao FROM censo_deficiencia
         WHERE e_total = false ORDER BY populacao DESC
     """)
+    st.subheader("População por Deficiência, por Tipo")
     st.plotly_chart(
-        px.bar(df, y="tipo_dificuldade", x="populacao", orientation="h", title="População por Deficiência, por Tipo"),
+        px.bar(
+            df, y="tipo_dificuldade", x="populacao", orientation="h",
+            labels={"tipo_dificuldade": "Tipo de Dificuldade", "populacao": "População"},
+        ),
         use_container_width=True,
     )
 
@@ -145,20 +195,24 @@ with aba1:
 with aba2:
     st.caption("⚠️ Dados fictícios/simulados — não representam a população real de Recife.")
 
-    c1, c2, c3, c4 = st.columns(4)
-    campos_completude = [
-        ("raca_cor", "Preenchimento Raça/Cor", c1),
-        ("deficiencia_tipo", "Preenchimento Deficiência", c2),
-        ("deseja_informar_orientacao_sexual", "Preenchimento Orient. Sexual", c3),
-        ("deseja_informar_identidade_genero", "Preenchimento Ident. Gênero", c4),
-    ]
-    for coluna, rotulo, coluna_ui in campos_completude:
-        df = consultar(f"""
-            SELECT ROUND(COUNT({coluna})::numeric / COUNT(*) * 100, 1) AS pct
-            FROM mock_pec_atendimentos
-        """)
-        coluna_ui.metric(rotulo, f"{df['pct'][0]}%")
+    st.subheader("KPIs de Preenchimento")
+    with st.container(border=True):
+        c1, c2, c3, c4 = st.columns(4)
+        campos_completude = [
+            ("raca_cor", "Preenchimento Raça/Cor", c1),
+            ("deficiencia_tipo", "Preenchimento Deficiência", c2),
+            ("deseja_informar_orientacao_sexual", "Preenchimento Orient. Sexual", c3),
+            ("deseja_informar_identidade_genero", "Preenchimento Ident. Gênero", c4),
+        ]
+        for coluna, rotulo, coluna_ui in campos_completude:
+            df = consultar(f"""
+                SELECT ROUND(COUNT({coluna})::numeric / COUNT(*) * 100, 1) AS pct
+                FROM mock_pec_atendimentos
+            """)
+            coluna_ui.metric(rotulo, f"{df['pct'][0]}%")
 
+    st.divider()
+    st.subheader("Mapas de Concentração")
     colm1, colm2, colm3 = st.columns(3)
     with colm1:
         df = consultar("""
@@ -170,9 +224,9 @@ with aba2:
             FROM mock_pec_atendimentos
             GROUP BY distrito_sanitario_codigo ORDER BY distrito_sanitario_codigo
         """)
-        st.plotly_chart(
+        _ = st_folium(
             mapa_distrito(df, "total", "Concentração LGBTQIAPN+", rotulo_valor="Pessoas LGBTQIAPN+"),
-            use_container_width=True,
+            width=380, height=320, returned_objects=[], key="mapa_lgbt",
         )
     with colm2:
         tipos_deficiencia = consultar("""
@@ -200,13 +254,13 @@ with aba2:
                 FROM mock_pec_atendimentos
                 GROUP BY distrito_sanitario_codigo ORDER BY distrito_sanitario_codigo
             """, params={"tipo": tipo_selecionado})
-        st.plotly_chart(
+        _ = st_folium(
             mapa_distrito(
                 df, "total",
                 f"Concentração PCD — {ROTULOS_DEFICIENCIA.get(tipo_selecionado, tipo_selecionado)}",
                 rotulo_valor="Pessoas com deficiência",
             ),
-            use_container_width=True,
+            width=380, height=320, returned_objects=[], key="mapa_pcd",
         )
     with colm3:
         df = consultar("""
@@ -218,13 +272,13 @@ with aba2:
             GROUP BY a.distrito_sanitario_codigo, p.populacao_negra_pct_esperado
             ORDER BY a.distrito_sanitario_codigo
         """)
-        st.plotly_chart(
+        _ = st_folium(
             mapa_distrito(
                 df, "gap_pp",
                 "População Negra: Censo x Registrado no Atendimento",
                 escala="Reds", rotulo_valor="Diferença (p.p.)",
             ),
-            use_container_width=True,
+            width=380, height=320, returned_objects=[], key="mapa_gap_racial",
         )
         st.caption(
             "Quanto mais escuro, maior a diferença entre a % de população negra "
@@ -252,25 +306,22 @@ with aba2:
 
     df = consultar("""
         SELECT codigo_equipe AS "Equipe",
-               CASE distrito_sanitario_codigo
-                   WHEN '01' THEN 'Distrito I'
-                   WHEN '02' THEN 'Distrito II'
-                   WHEN '03' THEN 'Distrito III'
-                   WHEN '04' THEN 'Distrito IV'
-                   WHEN '05' THEN 'Distrito V'
-                   WHEN '06' THEN 'Distrito VI'
-                   WHEN '07' THEN 'Distrito VII'
-                   WHEN '08' THEN 'Distrito VIII'
-               END AS "Distrito",
+               distrito_sanitario_codigo,
                COUNT(*) AS "Total de Atendimentos",
                ROUND(COUNT(deseja_informar_orientacao_sexual)::numeric / COUNT(*) * 100, 1) AS "% Preenchimento"
         FROM mock_pec_atendimentos
         WHERE profissional_tipo = 'ACS'
+          AND data_atendimento > (SELECT MAX(data_atendimento) FROM mock_pec_atendimentos) - INTERVAL '3 months'
         GROUP BY codigo_equipe, distrito_sanitario_codigo
-        ORDER BY "% Preenchimento" ASC
-        LIMIT 15
     """)
-    st.subheader("Ranking de Equipes por Preenchimento")
+    df["Distrito"] = df["distrito_sanitario_codigo"].map({
+        "01": "Distrito I", "02": "Distrito II", "03": "Distrito III", "04": "Distrito IV",
+        "05": "Distrito V", "06": "Distrito VI", "07": "Distrito VII", "08": "Distrito VIII",
+    })
+    df = df.sort_values("% Preenchimento").head(15).reset_index(drop=True)
+    df = df[["Equipe", "Distrito", "Total de Atendimentos", "% Preenchimento"]]
+
+    st.subheader("Ranking de Equipes por Preenchimento (últimos 3 meses)")
     st.dataframe(df, use_container_width=True)
 
     df = consultar("""
@@ -281,20 +332,29 @@ with aba2:
         GROUP BY mes ORDER BY mes
     """)
     df_evolucao = df.melt(id_vars="mes", var_name="Campo", value_name="Preenchimento (%)")
+    st.subheader("Evolução do Preenchimento")
     st.plotly_chart(
-        px.line(df_evolucao, x="mes", y="Preenchimento (%)", color="Campo", title="Evolução do Preenchimento"),
+        px.line(
+            df_evolucao, x="mes", y="Preenchimento (%)", color="Campo",
+            labels={"mes": "Mês"},
+        ),
         use_container_width=True,
     )
 
     df = consultar("""
         SELECT
-          COUNT(*) FILTER (WHERE deseja_informar_orientacao_sexual IS NULL) AS campo_em_branco,
-          COUNT(*) FILTER (WHERE deseja_informar_orientacao_sexual = 'Não') AS nao_informado,
-          COUNT(*) FILTER (WHERE deseja_informar_orientacao_sexual = 'Sim') AS informado
+          COUNT(*) FILTER (WHERE deseja_informar_orientacao_sexual IS NULL) AS "Campo em branco",
+          COUNT(*) FILTER (WHERE deseja_informar_orientacao_sexual = 'Não') AS "Recusou informar",
+          COUNT(*) FILTER (WHERE deseja_informar_orientacao_sexual = 'Sim') AS "Informou"
         FROM mock_pec_atendimentos
     """)
-    df_inconsistencias = df.melt(var_name="tipo", value_name="quantidade")
+    df_inconsistencias = df.melt(var_name="Categoria", value_name="Atendimentos")
+    st.subheader("Inconsistências — Orientação Sexual")
     st.plotly_chart(
-        px.bar(df_inconsistencias, x="tipo", y="quantidade", title="Inconsistências — Orientação Sexual"),
+        px.bar(
+            df_inconsistencias, x="Categoria", y="Atendimentos", color="Categoria",
+            color_discrete_map=CORES_INCONSISTENCIA,
+            category_orders={"Categoria": ORDEM_INCONSISTENCIA},
+        ).update_layout(showlegend=False),
         use_container_width=True,
     )

@@ -131,14 +131,23 @@ def gerar_atendimento(id_atendimento, equipe, taxas, mes_index, mes):
     identidade_genero = None
     nome_social = None
 
+    taxa_pergunta_orientacao = taxas["pergunta_orientacao"]
+    taxa_pergunta_genero = taxas["pergunta_genero"]
+    if taxas.get("salto_a_partir_mes") is not None and mes_index >= taxas["salto_a_partir_mes"]:
+        # salto artificial de preenchimento, injetado de propósito numa única
+        # equipe — serve pra demonstrar o alerta "salto atípico" do ranking
+        # do dashboard (alta repentina que merece checagem, não é elogio).
+        taxa_pergunta_orientacao = taxas["taxa_pos_salto"]
+        taxa_pergunta_genero = taxas["taxa_pos_salto"]
+
     if idade >= 10:  # regra da Secretaria: crianças de 0 a 10 anos ficam fora da análise LGBTQIAPN+
-        perguntou_orientacao = random.random() < min(taxas["pergunta_orientacao"] * fator_evolucao * multiplicador_profissional, 0.99)
+        perguntou_orientacao = random.random() < min(taxa_pergunta_orientacao * fator_evolucao * multiplicador_profissional, 0.99)
         if perguntou_orientacao:
             deseja_informar_orientacao = "Sim" if random.random() < 0.55 else "Não"
             if deseja_informar_orientacao == "Sim":
                 orientacao_sexual = random.choices(ORIENTACAO_SEXUAL_CATEGORIAS, weights=ORIENTACAO_SEXUAL_PESOS)[0]
 
-        perguntou_genero = random.random() < min(taxas["pergunta_genero"] * fator_evolucao * multiplicador_profissional, 0.99)
+        perguntou_genero = random.random() < min(taxa_pergunta_genero * fator_evolucao * multiplicador_profissional, 0.99)
         if perguntou_genero:
             deseja_informar_genero = "Sim" if random.random() < 0.55 else "Não"
             if deseja_informar_genero == "Sim":
@@ -184,6 +193,16 @@ if __name__ == "__main__":
     print(f"  {len(equipes)} equipes encontradas.")
 
     taxas_por_equipe = gerar_taxas_por_equipe(equipes)
+
+    # anomalia de demonstração: uma equipe começa com preenchimento ruim e dá
+    # um salto artificial nos últimos 3 meses (índice de mês >= 5) — usada pra
+    # exercitar o alerta "salto atípico" no ranking do dashboard.
+    equipe_anomalia_salto = equipes[0]["codigo_equipe"]
+    taxas_por_equipe[equipe_anomalia_salto]["pergunta_orientacao"] = 0.20
+    taxas_por_equipe[equipe_anomalia_salto]["pergunta_genero"] = 0.20
+    taxas_por_equipe[equipe_anomalia_salto]["salto_a_partir_mes"] = 5
+    taxas_por_equipe[equipe_anomalia_salto]["taxa_pos_salto"] = 0.95
+    print(f"Equipe {equipe_anomalia_salto}: salto atípico de preenchimento injetado a partir do mês 6.")
 
     atendimentos = []
     id_atendimento = 1
