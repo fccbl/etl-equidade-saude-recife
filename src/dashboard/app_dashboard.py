@@ -162,27 +162,73 @@ with aba1:
 
     df = consultar("SELECT raca_cor, populacao FROM censo_raca_cor ORDER BY populacao DESC")
     st.subheader("População por Raça/Cor")
-    st.plotly_chart(
-        px.bar(
-            df, x="raca_cor", y="populacao", color="raca_cor",
-            color_discrete_map=CORES_RACA_COR,
-            labels={"raca_cor": "Raça/Cor", "populacao": "População"},
-        ).update_layout(showlegend=False),
-        use_container_width=True,
+    # Rosca em vez de barras: os grupos são muito desiguais (Amarela e Indígena
+    # somem numa escala de barras). Cada fatia mostra a % escrita, e as pequenas
+    # ficam com o rótulo do lado de fora, então nenhum grupo some.
+    total_pop = int(df["populacao"].sum())
+    grafico_raca = px.pie(
+        df, names="raca_cor", values="populacao", color="raca_cor",
+        color_discrete_map=CORES_RACA_COR, hole=0.5,
     )
+    # fatias pequenas (< 3%): rótulo numa linha só, para não encostarem uma na outra
+    fatias = df["populacao"] / total_pop
+    rotulos = ["%{label} · %{percent:.1%}" if f < 0.03 else "%{label}<br>%{percent:.1%}" for f in fatias]
+    grafico_raca.update_traces(
+        sort=False, direction="clockwise", rotation=90,
+        texttemplate=rotulos, textposition="outside", textfont_size=14,
+        hovertemplate="%{label}: %{value:,.0f} pessoas (%{percent:.1%})<extra></extra>",
+    )
+    grafico_raca.update_layout(
+        showlegend=True, height=500, separators=",.",
+        legend=dict(orientation="h", x=0.5, xanchor="center", y=-0.12, title_text=""),
+        margin=dict(t=40, b=70, l=40, r=40),
+        annotations=[dict(text=f"<b>{total_pop:,}</b><br>pessoas".replace(",", "."),
+                          x=0.5, y=0.5, showarrow=False, font_size=16)],
+    )
+    st.plotly_chart(grafico_raca, use_container_width=True)
+    pop_negra = int(df.loc[df["raca_cor"].isin(["Preta", "Parda"]), "populacao"].sum())
+    pct_negra = f"{pop_negra / total_pop * 100:.1f}".replace(".", ",")
+    qtd_negra = f"{pop_negra:,}".replace(",", ".")
+    st.caption(f"População negra (preta + parda, padrão IBGE): {pct_negra}% ({qtd_negra} pessoas). "
+               "Fonte: Censo 2022.")
 
     df = consultar("""
         SELECT tipo_dificuldade, populacao FROM censo_deficiencia
         WHERE e_total = false ORDER BY populacao DESC
     """)
     st.subheader("População por Deficiência, por Tipo")
-    st.plotly_chart(
-        px.bar(
-            df, y="tipo_dificuldade", x="populacao", orientation="h",
-            labels={"tipo_dificuldade": "Tipo de Dificuldade", "populacao": "População"},
-        ),
-        use_container_width=True,
+    # Rótulos curtos (mesmos nomes do mapa de PCD) + o essencial entre parênteses.
+    # O trecho repetido ("dificuldade permanente... mesmo usando...") vai para a
+    # legenda embaixo, e o texto completo do Censo aparece ao passar o mouse.
+    DETALHE_DEFICIENCIA = {
+        "Visual": "enxergar, mesmo com óculos ou lentes",
+        "Auditiva": "ouvir, mesmo com aparelho auditivo",
+        "Motora": "andar ou subir degraus",
+        "Manual": "pegar objetos pequenos ou abrir tampas",
+        "Mental/Cognitiva": "comunicar-se, cuidar de si, trabalhar ou estudar",
+    }
+    df["tipo"] = df["tipo_dificuldade"].map(ROTULOS_DEFICIENCIA).fillna(df["tipo_dificuldade"])
+    df["rotulo"] = [
+        f"<b>{t}</b><br>{DETALHE_DEFICIENCIA.get(t, '')}" for t in df["tipo"]
+    ]
+    df["valor_txt"] = df["populacao"].map(lambda v: f"{int(v):,}".replace(",", "."))
+    grafico_def = px.bar(
+        df, y="rotulo", x="populacao", orientation="h", text="valor_txt",
+        custom_data=["tipo_dificuldade", "valor_txt"],
     )
+    grafico_def.update_traces(
+        textposition="outside", textfont_size=15, cliponaxis=False,
+        hovertemplate="%{customdata[0]}<br><b>%{customdata[1]} pessoas</b><extra></extra>",
+    )
+    grafico_def.update_layout(
+        height=470, margin=dict(t=20, b=40, l=10, r=70), separators=",.",
+        yaxis=dict(title=None, autorange="reversed", tickfont_size=15),  # maior no topo
+        xaxis=dict(title="População", tickfont_size=13, separatethousands=True),
+        bargap=0.35,
+    )
+    st.plotly_chart(grafico_def, use_container_width=True)
+    st.caption("Todas são dificuldades permanentes, mesmo com aparelho de auxílio (Censo 2022). "
+               "Uma pessoa pode ter mais de um tipo, por isso os valores não devem ser somados.")
 
     df = consultar("""
         SELECT cnes, nome_fantasia, tipo_estabelecimento
